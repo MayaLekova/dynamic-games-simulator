@@ -1,0 +1,30 @@
+{
+  "name": "dynamic-games-simulator",
+  "version": "1.0.0",
+  "description": "A simple web-based simulator for creating and analysing dynamic resource allocation games, written in TypeScript. Inspired by the karma_game_library available on PyPI.",
+  "keywords": [
+    "dynamic",
+    "games",
+    "karma",
+    "resource",
+    "allocation"
+  ],
+  "homepage": "https://github.com/MayaLekova/dynamic-games-simulator#readme",
+  "bugs": {
+    "url": "https://github.com/MayaLekova/dynamic-games-simulator/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MayaLekova/dynamic-games-simulator.git"
+  },
+  "license": "MIT",
+  "author": "Maya Lekova",
+  "type": "module",
+  "main": "backend/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "teleportal": "^0.0.4"
+  }
+}
