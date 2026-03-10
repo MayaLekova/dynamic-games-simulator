@@ -1,3 +1,11 @@
+import { Server } from "teleportal/server";
+// import { createInMemory } from "teleportal/storage";
+// We're currently using an 'unstorage' module that is external to
+// teleportal. Eventually we should use the internal one, see:
+// https://github.com/nperez0111/teleportal/blob/3792006ddc9b0d5db2138356b9b11ec5ff7cb5ab/docs/src/content/docs/integration.mdx#L10 
+import { createStorage } from "unstorage";
+import { getWebsocketHandlers } from "teleportal/websocket-server";
+
 import * as fs from "node:fs";
 import * as http from "node:http";
 import * as path from "node:path";
@@ -45,3 +53,21 @@ http
   .listen(PORT);
 
 console.log(`Server running at http://127.0.0.1:${PORT}/`);
+
+// TODO: use somewhere
+const teleServer = new Server({
+  getStorage: async (ctx) => {
+    const { documentStorage } = createStorage();
+      // original from the teleportal example: createInMemory();
+    return documentStorage;
+  },
+});
+
+const handlers = getWebsocketHandlers({
+  onConnect: async ({ transport, context, id }) => {
+    await teleServer.createClient(transport, context, id);
+  },
+  onDisconnect: async (id) => {
+    await teleServer.disconnectClient(id);
+  },
+});
