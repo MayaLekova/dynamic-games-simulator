@@ -1,10 +1,7 @@
 import { Server } from "teleportal/server";
-// import { createInMemory } from "teleportal/storage";
-// We're currently using an 'unstorage' module that is external to
-// teleportal. Eventually we should use the internal one, see:
-// https://github.com/nperez0111/teleportal/blob/3792006ddc9b0d5db2138356b9b11ec5ff7cb5ab/docs/src/content/docs/integration.mdx#L10 
-import { createStorage } from "unstorage";
-import { getWebsocketHandlers } from "teleportal/websocket-server";
+import { YDocStorage } from "teleportal/storage";
+import { getHTTPHandlers } from "teleportal/http";
+import { createTokenManager } from "teleportal/token";
 
 import * as fs from "node:fs";
 import * as http from "node:http";
@@ -24,7 +21,7 @@ const MIME_TYPES = {
   svg: "image/svg+xml",
 };
 
-const STATIC_PATH = path.join(process.cwd(), "../frontend");
+const STATIC_PATH = path.join(process.cwd(), "frontend");
 
 const toBool = [() => true, () => false];
 
@@ -54,20 +51,93 @@ http
 
 console.log(`Server running at http://127.0.0.1:${PORT}/`);
 
-// TODO: use somewhere
-const teleServer = new Server({
-  getStorage: async (ctx) => {
-    const { documentStorage } = createStorage();
-      // original from the teleportal example: createInMemory();
-    return documentStorage;
+const tokenManager = createTokenManager({
+  secret: "your-secret-key-here",
+  expiresIn: 3600, // 1 hour
+  issuer: "my-collaborative-app",
+});
+
+// TODO_1: use `server` somewhere
+// TODO_2: for authentication, add checkPermission property as in
+// https://teleportal.tools/core-concepts/authentication/#server-integration
+const server = new Server({
+  storage: new YDocStorage(),
+  checkPermission: async ({ context, documentId, fileId, message, type }) => {
+    // Extract token from context
+    const token = context.token; // TS specific: (context as any).token;
+    if (!token) return false;
+
+    // Verify token
+    const result = await tokenManager.verifyToken(token);
+    if (!result.valid || !result.payload) return false;
+
+    const payload = result.payload;
+
+    // Check room access
+    if (payload.room !== context.room) return false;
+
+    // Handle file messages
+    if (message.type === "file") {
+      // File messages use fileId for permission checks
+      return true; // Implement file-specific permission checks
+    }
+
+    // Check document permissions
+    if (!documentId) {
+      throw new Error("documentId is required for doc messages");
+    }
+    const requiredPermission = message.type === "awareness" ? "read" : "write";
+    return tokenManager.hasDocumentPermission(payload, documentId, requiredPermission);
   },
 });
 
-const handlers = getWebsocketHandlers({
-  onConnect: async ({ transport, context, id }) => {
-    await teleServer.createClient(transport, context, id);
+async function extractAndCheckToken(request) {
+  // Extract token from request
+  const url = new URL(request.url);
+  const token = url.searchParams.get("token") ||
+                request.headers.get("authorization")?.replace("Bearer ", "");
+
+  if (!token) {
+    throw new Response("No token provided", { status: 401 });
+  }
+
+  // Verify token
+  const result = await tokenManager.verifyToken(token);
+  if (!result.valid || !result.payload) {
+    throw new Response("Invalid token", { status: 401 });
+  }
+
+  const payload = result.payload;
+
+  // Check expiration
+  if (payload.exp && Date.now() / 1000 > payload.exp) {
+    throw new Response("Token expired", { status: 401 });
+  }
+  
+  return token;
+}
+
+const handlers = getHTTPHandlers({
+  server,
+  // onUpgrade: async () => {
+  //   const token = await extractAndCheckToken(request);
+
+  //   // Extract user context from the request
+  //   // In production, you'd verify authentication here
+  //   return {
+  //     context: { userId: "user-123", room: "workspace-1", token },
+  //   };
+  // },
+  onConnect: async (request) => {
+    const { transport, context, id } = request;
+    const client = await server.createClient(transport, context, id);
+    const token = await extractAndCheckToken(request);
+
+    return {
+      context: { userId: client.userId, room: client.room, token },
+    };
   },
   onDisconnect: async (id) => {
-    await teleServer.disconnectClient(id);
+    await server.disconnectClient(id);
   },
 });
