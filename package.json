@@ -27,6 +27,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "crossws": "^0.4.4",
+    "srvx": "^0.11.12",
     "teleportal": "^0.0.4",
     "unstorage": "^1.17.4"
   }

@@ -51,8 +51,11 @@
       ],
     );
 
+    // TODO_1: add passing the token again
+    // TODO_2: make the port for WebSockets configurable
     const provider = await Provider.create({
-      url: `${window.location.origin}/?token=${token}`,
+      //url: `${window.location.origin}/?token=${token}`,
+      url: `ws://${window.location.hostname}:3000`,
       document: "test",
     });
 
@@ -82,6 +85,12 @@
       }),
     });
     document.body.insertBefore(editorContainer, null);
+
+    const ymap = provider.doc.getMap('data');
+    ymap.set('key', 'baba');
+    provider.on("update", (state) => {
+      console.log("Connection state:", state.type);
+    });
 
     setTimeout(() => {
       prosemirrorView.focus();

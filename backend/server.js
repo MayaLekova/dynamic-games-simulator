@@ -1,11 +1,14 @@
+import { serve } from "crossws/server";
 import { Server } from "teleportal/server";
 import { YDocStorage } from "teleportal/storage";
 import { getHTTPHandlers } from "teleportal/http";
+import { getWebsocketHandlers } from "teleportal/websocket-server";
 import { createTokenManager } from "teleportal/token";
 
 import * as fs from "node:fs";
 import * as http from "node:http";
 import * as path from "node:path";
+import { websocket } from "teleportal/providers";
 
 const PORT = 8000;
 
@@ -38,6 +41,7 @@ const prepareFile = async (url) => {
   return { found, ext, stream };
 };
 
+// Node.js HTTP server
 http
   .createServer(async (req, res) => {
     const file = await prepareFile(req.url);
@@ -57,9 +61,13 @@ const tokenManager = createTokenManager({
   issuer: "my-collaborative-app",
 });
 
-// TODO_1: use `server` somewhere
-// TODO_2: for authentication, add checkPermission property as in
+// [done] TODO_1: use `server` somewhere
+// [done] TODO_2: for authentication, add checkPermission property as in
 // https://teleportal.tools/core-concepts/authentication/#server-integration
+
+// [done] TODO_3: Add back WebSocket transport.
+
+// Teleportal server
 const server = new Server({
   storage: new YDocStorage(),
   checkPermission: async ({ context, documentId, fileId, message, type }) => {
@@ -117,27 +125,54 @@ async function extractAndCheckToken(request) {
   return token;
 }
 
-const handlers = getHTTPHandlers({
+const ws_handlers = getWebsocketHandlers({
   server,
-  // onUpgrade: async () => {
-  //   const token = await extractAndCheckToken(request);
-
-  //   // Extract user context from the request
-  //   // In production, you'd verify authentication here
-  //   return {
-  //     context: { userId: "user-123", room: "workspace-1", token },
-  //   };
-  // },
   onConnect: async (request) => {
     const { transport, context, id } = request;
+    console.log('onConnect; id: ', id);
     const client = await server.createClient(transport, context, id);
-    const token = await extractAndCheckToken(request);
+
+    // TODO_4: see what's wrong with the token, pass it back to `context`
+    // const token = await extractAndCheckToken(request);
 
     return {
-      context: { userId: client.userId, room: client.room, token },
+      context: { userId: client.userId, room: client.room},
     };
   },
   onDisconnect: async (id) => {
     await server.disconnectClient(id);
   },
+  onUpgrade: async (request) => {
+    console.log('onUpgrade; checking token... ');
+
+    // TODO_4: see what's wrong with the token and pass it back to `context`
+    // const token = await extractAndCheckToken(request);
+    // console.log('onUpgrade; token: ', token);
+    
+    // Extract user context from the request
+    // In production, you'd verify authentication here
+    return { context: { userId: "user-123", room: "workspace-1" } };
+  },
 });
+
+serve({
+  websocket: ws_handlers,
+  fetch: () => new Response("Not found", { status: 404 }),
+});
+
+// TODO_5: add fallback HTTP transport
+// const handlers = getHTTPHandlers({
+//   server,
+//   onConnect: async (request) => {
+//     const { transport, context, id } = request;
+//     const client = await server.createClient(transport, context, id);
+//     const token = await extractAndCheckToken(request);
+
+//     return {
+//       context: { userId: client.userId, room: client.room, token },
+//     };
+//   },
+//   onDisconnect: async (id) => {
+//     await server.disconnectClient(id);
+//   },
+// });
