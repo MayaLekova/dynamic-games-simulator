@@ -71,6 +71,9 @@ const tokenManager = createTokenManager({
 const server = new Server({
   storage: new YDocStorage(),
   checkPermission: async ({ context, documentId, fileId, message, type }) => {
+    // TODO_4: get the token back
+    return true;
+
     // Extract token from context
     const token = context.token; // TS specific: (context as any).token;
     if (!token) return false;
@@ -127,21 +130,7 @@ async function extractAndCheckToken(request) {
 
 const ws_handlers = getWebsocketHandlers({
   server,
-  onConnect: async (request) => {
-    const { transport, context, id } = request;
-    console.log('onConnect; id: ', id);
-    const client = await server.createClient(transport, context, id);
 
-    // TODO_4: see what's wrong with the token, pass it back to `context`
-    // const token = await extractAndCheckToken(request);
-
-    return {
-      context: { userId: client.userId, room: client.room},
-    };
-  },
-  onDisconnect: async (id) => {
-    await server.disconnectClient(id);
-  },
   onUpgrade: async (request) => {
     console.log('onUpgrade; checking token... ');
 
@@ -151,7 +140,7 @@ const ws_handlers = getWebsocketHandlers({
     
     // Extract user context from the request
     // In production, you'd verify authentication here
-    return { context: { userId: "user-123", room: "workspace-1" } };
+    return { context: { userId: "user-123", room: "workspace-1" /*, token*/ } };
   },
 });
 
@@ -160,6 +149,8 @@ serve({
   fetch: () => new Response("Not found", { status: 404 }),
 });
 
+// Info: onConnect/onDisconnect are not needed w/ WebSockets
+// at all. Add them back if httpTransport is needed as fallback.
 // TODO_5: add fallback HTTP transport
 // const handlers = getHTTPHandlers({
 //   server,
