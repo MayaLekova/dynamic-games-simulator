@@ -107,18 +107,12 @@
 
     createApp({
       setup() {
-
-        function set_high() {
+        // urgency_val should be one of: 'low', 'medium', 'high'
+        function set_urgency(urgency_val) {
           if (simulation_running.value) return;
 
-          urgency.value = 'high'
-          ymap.set('urgency', 'high')
-        }
-        function set_low() {
-          if (simulation_running.value) return;
-
-          urgency.value = 'low'
-          ymap.set('urgency', 'low')
+          urgency.value = urgency_val;
+          ymap.set('urgency', urgency_val);
         }
         function reserve() {
           simulation_running.value = true;
@@ -128,8 +122,7 @@
           karma,
           urgency,
           simulation_running,
-          set_high,
-          set_low,
+          set_urgency,
           reserve
         }
       }
@@ -567,13 +560,19 @@
 
       <div class="form-section" v-if="!simulation_running">
         <span class="form-label">{{ message }}</span>
-
-        <button @click="set_high">High</button>
-        <button @click="set_low">Low</button>
+        <span>
+          <button @click="set_urgency('low')">&#x1F69C; Low</button>
+        </span>
+        <span>
+          <button @click="set_urgency('medium')">&#x1F697; Medium</button>
+        </span>
+        <span>
+          <button @click="set_urgency('high')">&#x1F695; High</button>
+        </span>
       </div>
 
       <div id="urgency-view" class="form-section" v-if="!simulation_running">
-        <span class="form-label">Current urgency: {{ urgency }}</span>
+        <span class="form-label">Current urgency: <b>{{ urgency }}</b></span>
         <button @click="reserve">Reserve!</button>
       </div>
       <div class="form-section" style="border-color: lightcoral;" v-else>
