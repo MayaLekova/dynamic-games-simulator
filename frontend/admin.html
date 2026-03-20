@@ -59,16 +59,19 @@
 
     // TODO_2: Read the value from the store
     // (we could be reconnecting to a running simulation)
-    const simulation_running = ref(false);
+    const game_state = provider.doc.getMap('system_state');
+    const simulation_running = ref(game_state.get('simulation_running') || false);
 
     createApp({
       setup() {
         function start_simulation() {
           simulation_running.value = true;
+          game_state.set('simulation_running', true);
         }
         // TODO_3: If we want to be fancy, we could add a "pause"
         function stop_simulation() {
           simulation_running.value = false;
+          game_state.set('simulation_running', false);
         }
         return {
           message,

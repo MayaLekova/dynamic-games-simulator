@@ -12,6 +12,8 @@ import { websocket } from "teleportal/providers";
 
 const PORT = 8000;
 
+// Source for the web server:
+// https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Server-side/Node_server_without_framework
 const MIME_TYPES = {
   default: "application/octet-stream",
   html: "text/html; charset=UTF-8",

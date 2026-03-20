@@ -63,7 +63,7 @@
     // document.body.insertBefore(editorContainer, null);
     // const { doc, mapping } = initProseMirrorDoc(type, schema);
 
-    // Also, see if we should *actually* have a component.
+    // Also, see if we should *actually* create a component.
 
     const ymap = provider.doc.getMap('data');
     ymap.set('karma', 42);
@@ -76,7 +76,14 @@
     const karma = ref(ymap.get('karma'))
     // TODO_4: add constants for high/mid/low urgency
     const urgency = ref(ymap.get('urgency'));
-    const simulation_running = ref(false);
+
+    const game_state = provider.doc.getMap('system_state');
+    const simulation_running = ref(game_state.get('simulation_running'));
+    provider.doc.on('update', (update, origin) => {
+      console.log('Document updated');
+      // TODO_6: There should be a finer-grained way to update the state.
+      simulation_running.value = game_state.get('simulation_running');
+    });
 
     createApp({
       setup() {
@@ -88,7 +95,8 @@
           ymap.set('urgency', urgency_val);
         }
         function reserve() {
-          simulation_running.value = true;
+          // TODO_5: check if the value is synced from the server
+          // simulation_running.value = true;
         }
         return {
           message,
