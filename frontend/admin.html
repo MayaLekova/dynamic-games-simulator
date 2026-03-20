@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Parking reservation system</title>
+  </head>
+  <script setup type="module">
+    import { createTeleportalDevtools } from "https://esm.sh/teleportal@0.0.4/devtools";
+
+    const devtools = createTeleportalDevtools();
+    document.getElementById("devtools").appendChild(devtools);
+
+    import { Provider } from "https://esm.sh/teleportal@0.0.4/providers";
+    import { createTokenManager } from "https://esm.sh/teleportal@0.0.4/token";
+    import { createApp, ref } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+
+    // just for illustration, we create the token on the client
+    // in production, you would generate the token on the server and send it to the client
+    const tokenManager = createTokenManager({
+      secret: "your-secret-key-here",
+      expiresIn: 3600, // 1 hour
+      issuer: "my-collaborative-app",
+    });
+
+    // create a JWT token for the user
+    const token = await tokenManager.createToken(
+      // user id
+      "designer",
+      // room id (multi-tenant)
+      "docs",
+      // document access patterns and permissions
+      [
+        // allow the user to have full access to all documents
+        { pattern: "*", permissions: ["admin"] },
+      ],
+    );
+
+    // TODO_3: add passing the token again
+    // TODO_4: make the port for WebSockets configurable
+    const provider = await Provider.create({
+      //url: `${window.location.origin}/?token=${token}`,
+      url: `ws://${window.location.hostname}:3000`,
+      document: "test",
+    });
+
+    await provider.synced;
+
+    const ymap = provider.doc.getMap('data');
+    console.log(ymap);
+    // TODO_1: add multiple agents
+    // ymap.set('karma', 42);
+    // ymap.set('urgency', 'medium');
+    provider.on("update", (state) => {
+      console.log("Connection state:", state.type);
+    });
+
+    const message = ref('Simulation: ');
+
+    // TODO_2: Read the value from the store
+    // (we could be reconnecting to a running simulation)
+    const simulation_running = ref(false);
+
+    createApp({
+      setup() {
+        function start_simulation() {
+          simulation_running.value = true;
+        }
+        // TODO_3: If we want to be fancy, we could add a "pause"
+        function stop_simulation() {
+          simulation_running.value = false;
+        }
+        return {
+          message,
+          simulation_running,
+          start_simulation,
+          stop_simulation
+        }
+      }
+    }).mount('#app')
+  </script>
+
+  <style type="text/css">
+    .form-section {
+      padding-top: 6px;
+      padding-bottom: 6px;
+      border: 2px solid lightblue;
+    }
+    .form-label {
+      margin-right: 10px;
+    }
+  </style>
+
+  <body>
+    <h1>< System observation deck ></h1>
+    <hr/>
+    <div id="app">
+      <div class="form-section">
+        <span class="form-label">{{ message }}</span>
+        <span>
+          <button @click="start_simulation">&#x25B8; Start</button>
+        </span>
+        <span>
+          <button @click="stop_simulation">&#x25A0; Stop</button>
+        </span>
+      </div>
+
+      <div id="agents-view">
+        <div class="form-section">
+          <span class="form-label">Current karma: <b>{{ karma }}</b></span>
+        </div>
+        <div class="form-section">
+          <span class="form-label">Current urgency: <b>{{ urgency }}</b></span>
+        </div>
+      </div>
+      <!-- TODO_5: The "simulation running" message could be an overlay -->
+      <div class="form-section" style="border-color: lightcoral;" v-if="simulation_running">
+        Simulation running, please wait...
+      </div>
+
+    </div>
+    <div
+      id="devtools"
+      style="
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 300px;
+        z-index: 1;
+      "
+    ></div>
+  </body>
+</html>
