@@ -23,58 +23,73 @@
       issuer: "my-collaborative-app",
     });
 
+    const userId = 'designer';
     // create a JWT token for the user
     const token = await tokenManager.createToken(
       // user id
-      "designer",
+      userId,
       // room id (multi-tenant)
-      "docs",
+      "parking-org",
       // document access patterns and permissions
       [
-        // allow the user to have full access to all documents
-        { pattern: "*", permissions: ["admin"] },
+        // allow the user to have full access to system and user state
+        {
+          pattern: "system_state/*",
+          permissions: ["admin"]
+        },
+        {
+          pattern: `user_data/*`,
+          permissions: ["admin"]
+        },
       ],
     );
 
     // TODO_3: add passing the token again
     // TODO_4: make the port for WebSockets configurable
     const provider = await Provider.create({
-      //url: `${window.location.origin}/?token=${token}`,
-      url: `ws://${window.location.hostname}:3000`,
-      document: "test",
+      url: `ws://${window.location.hostname}:3000/?token=${token}`,
+      document: 'main-cluster',
     });
 
     await provider.synced;
 
-    const ymap = provider.doc.getMap('data');
-    console.log(ymap);
-    // TODO_1: add multiple agents
-    // ymap.set('karma', 42);
-    // ymap.set('urgency', 'medium');
-    provider.on("update", (state) => {
-      console.log("Connection state:", state.type);
+    // TODO_11: add multiple agents
+    // Transform the map {userId: {...}} to an iterable and view it
+    // in a table, as in https://vuejs.org/tutorial/#step-7
+    // Maybe we should add a list of known users and read them one by one.
+    const gencho_data = provider.doc.getMap('user_data/gencho');
+    console.log(gencho_data);
+    const all_users = ref([{
+      id: 'gencho',
+      karma: gencho_data.get('karma'),
+      urgency: gencho_data.get('urgency')
+    }]);
+
+    provider.on('update', (state) => {
+      console.log('Connection state:', state.type);
     });
 
     const message = ref('Simulation: ');
 
     // TODO_2: Read the value from the store
     // (we could be reconnecting to a running simulation)
-    const game_state = provider.doc.getMap('system_state');
-    const simulation_running = ref(game_state.get('simulation_running') || false);
+    const system_state = provider.doc.getMap('system_state');
+    const simulation_running = ref(system_state.get('simulation_running') || false);
 
     createApp({
       setup() {
         function start_simulation() {
           simulation_running.value = true;
-          game_state.set('simulation_running', true);
+          system_state.set('simulation_running', true);
         }
         // TODO_3: If we want to be fancy, we could add a "pause"
         function stop_simulation() {
           simulation_running.value = false;
-          game_state.set('simulation_running', false);
+          system_state.set('simulation_running', false);
         }
         return {
           message,
+          all_users,
           simulation_running,
           start_simulation,
           stop_simulation
@@ -95,7 +110,7 @@
   </style>
 
   <body>
-    <h1>< System observation deck ></h1>
+    <h1>&#x2708; System observation deck &#x2708; </h1>
     <hr/>
     <div id="app">
       <div class="form-section">
@@ -109,11 +124,10 @@
       </div>
 
       <div id="agents-view">
-        <div class="form-section">
-          <span class="form-label">Current karma: <b>{{ karma }}</b></span>
-        </div>
-        <div class="form-section">
-          <span class="form-label">Current urgency: <b>{{ urgency }}</b></span>
+        <div class="form-section"  v-for="user in all_users" :key="user.id">
+          <span class="form-label">{{ user.id }}</b></span> |
+          <span class="form-label">urgency: <b>{{ user.urgency }}</b></span> |
+          <span class="form-label">karma: <b>{{ user.karma }}</b></span>
         </div>
       </div>
       <!-- TODO_5: The "simulation running" message could be an overlay -->

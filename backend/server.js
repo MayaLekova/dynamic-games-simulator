@@ -126,23 +126,31 @@ async function extractAndCheckToken(request) {
   if (payload.exp && Date.now() / 1000 > payload.exp) {
     throw new Response("Token expired", { status: 401 });
   }
-  
-  return token;
+
+  return {
+    context: {
+      userId: payload.userId,
+      room: payload.room,
+      token, // Pass token for permission checking
+    },
+  };
 }
 
 const ws_handlers = getWebsocketHandlers({
   server,
 
   onUpgrade: async (request) => {
-    console.log('onUpgrade; checking token... ');
+    // console.log('onUpgrade, checking token; request: ');
+    // console.log(request);
 
     // TODO_4: see what's wrong with the token and pass it back to `context`
-    // const token = await extractAndCheckToken(request);
-    // console.log('onUpgrade; token: ', token);
+    const context = await extractAndCheckToken(request);
+    // console.log('extractAndCheckToken successful; context: ');
+    // console.log(context);
     
     // Extract user context from the request
     // In production, you'd verify authentication here
-    return { context: { userId: "user-123", room: "workspace-1" /*, token*/ } };
+    return context;
   },
 });
 

@@ -23,12 +23,14 @@
       issuer: "my-collaborative-app",
     });
 
+    // TODO_11: Add UI for authentication
+    const userId = 'gencho';
     // create a JWT token for the user
     const token = await tokenManager.createToken(
       // user id
-      "nick",
+      userId,
       // room id (multi-tenant)
-      "docs",
+      "parking-org",
       // document access patterns and permissions
       [
         // TODO_5: Give each user permissions to their state only.
@@ -38,16 +40,22 @@
             // urgency: String,
         // }
         // allow the user to have full access to all documents
-        { pattern: "*", permissions: ["admin"] },
+        {
+          pattern: "system_state/*",
+          permissions: ["read", "comment"]
+        },
+        {
+          pattern: `user_data/${userId}/*`,
+          permissions: ["read", "write", "comment", "suggest", "admin"]
+        },
       ],
     );
 
     // TODO_1: add passing the token again
     // TODO_2: make the port for WebSockets configurable
     const provider = await Provider.create({
-      //url: `${window.location.origin}/?token=${token}`,
-      url: `ws://${window.location.hostname}:3000`,
-      document: "test",
+      url: `ws://${window.location.hostname}:3000/?token=${token}`,
+      document: "main-cluster",
     });
 
     await provider.synced;
@@ -65,24 +73,24 @@
 
     // Also, see if we should *actually* create a component.
 
-    const ymap = provider.doc.getMap('data');
-    ymap.set('karma', 42);
-    ymap.set('urgency', 'medium');
+    const user_data = provider.doc.getMap(`user_data/${userId}`);
+    user_data.set('karma', 42);
+    user_data.set('urgency', 'medium');
     provider.on("update", (state) => {
       console.log("Connection state:", state.type);
     });
 
     const message = ref('Please choose your urgency:');
-    const karma = ref(ymap.get('karma'))
+    const karma = ref(user_data.get('karma'))
     // TODO_4: add constants for high/mid/low urgency
-    const urgency = ref(ymap.get('urgency'));
+    const urgency = ref(user_data.get('urgency'));
 
-    const game_state = provider.doc.getMap('system_state');
-    const simulation_running = ref(game_state.get('simulation_running'));
+    const system_state = provider.doc.getMap('system_state');
+    const simulation_running = ref(system_state.get('simulation_running'));
     provider.doc.on('update', (update, origin) => {
       console.log('Document updated');
       // TODO_6: There should be a finer-grained way to update the state.
-      simulation_running.value = game_state.get('simulation_running');
+      simulation_running.value = system_state.get('simulation_running');
     });
 
     createApp({
@@ -126,7 +134,7 @@
     <hr/>
     <div id="app">
       <div id="karma-view" class="form-section">
-        Your currently have <b>{{ karma }}</b> parking points.
+        You currently have <b>{{ karma }}</b> parking points.
       </div>
 
       <div class="form-section" v-if="!simulation_running">
