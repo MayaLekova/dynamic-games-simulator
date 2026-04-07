@@ -23,11 +23,11 @@
       issuer: "my-collaborative-app",
     });
 
-    const userId = 'designer';
+    const adminId = 'designer';
     // create a JWT token for the user
     const token = await tokenManager.createToken(
       // user id
-      userId,
+      adminId,
       // room id (multi-tenant)
       "parking-org",
       // document access patterns and permissions
@@ -57,18 +57,14 @@
     // Transform the map {userId: {...}} to an iterable and view it
     // in a table, as in https://vuejs.org/tutorial/#step-7
     // Maybe we should add a list of known users and read them one by one.
-    const gencho_data = provider.doc.getMap('user_data/gencho');
+    const userId = 'gencho';
+    const gencho_data = provider.doc.getMap(`user_data/${userId}`);
     console.log(gencho_data);
     const all_users = ref([{
-      id: 'gencho',
+      id: userId,
       karma: gencho_data.get('karma'),
       urgency: gencho_data.get('urgency')
     }]);
-
-    provider.on('update', (state) => {
-      console.log('Connection state:', state.type);
-      // TODO_11: Update gencho_data and similar.
-    });
 
     const message = ref('Simulation: ');
 
@@ -76,6 +72,18 @@
     // (we could be reconnecting to a running simulation)
     const system_state = provider.doc.getMap('system_state');
     const simulation_running = ref(system_state.get('simulation_running') || false);
+
+    provider.doc.on('update', (update, origin) => {
+      console.log('Document updated');
+      console.log(origin);
+      // TODO_6: There should be a finer-grained way to update the state.
+      // TODO_11: Update gencho_data and similar.
+      all_users.value = [{
+        id: userId,
+        karma: gencho_data.get('karma'),
+        urgency: gencho_data.get('urgency')
+      }];
+    });
 
     createApp({
       setup() {

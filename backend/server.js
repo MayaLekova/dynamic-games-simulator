@@ -31,6 +31,7 @@ const STATIC_PATH = path.join(process.cwd(), "frontend");
 const toBool = [() => true, () => false];
 
 const prepareFile = async (url) => {
+  console.log('Preparing file for URL:', url);
   const paths = [STATIC_PATH, url];
   if (url.endsWith("/")) paths.push("index.html");
   const filePath = path.join(...paths);
@@ -46,12 +47,17 @@ const prepareFile = async (url) => {
 // Node.js HTTP server
 http
   .createServer(async (req, res) => {
-    const file = await prepareFile(req.url);
+    console.log('URL:', req.url);
+    const url = new URL(`http://127.0.0.1${req.url}`);
+    const userId = url.searchParams.get('userId');
+    console.log('UserID:', userId);
+
+    const file = await prepareFile(url.pathname);
     const statusCode = file.found ? 200 : 404;
     const mimeType = MIME_TYPES[file.ext] || MIME_TYPES.default;
     res.writeHead(statusCode, { "Content-Type": mimeType });
     file.stream.pipe(res);
-    console.log(`${req.method} ${req.url} ${statusCode}`);
+    console.log(`${req.method} ${req.url} ${statusCode} ${userId}`);
   })
   .listen(PORT);
 
@@ -128,11 +134,9 @@ async function extractAndCheckToken(request) {
   }
 
   return {
-    context: {
-      userId: payload.userId,
-      room: payload.room,
-      token, // Pass token for permission checking
-    },
+    userId: payload.userId,
+    room: payload.room,
+    token, // Pass token for permission checking
   };
 }
 
@@ -140,13 +144,10 @@ const ws_handlers = getWebsocketHandlers({
   server,
 
   onUpgrade: async (request) => {
-    // console.log('onUpgrade, checking token; request: ');
-    // console.log(request);
-
     // TODO_4: see what's wrong with the token and pass it back to `context`
     const context = await extractAndCheckToken(request);
     // console.log('extractAndCheckToken successful; context: ');
-    // console.log(context);
+    console.log('User connected:', context.userId);
     
     // Extract user context from the request
     // In production, you'd verify authentication here

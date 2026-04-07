@@ -17,102 +17,34 @@
 
     // just for illustration, we create the token on the client
     // in production, you would generate the token on the server and send it to the client
+    // TODO_11: Add UI for authentication
     const tokenManager = createTokenManager({
       secret: "your-secret-key-here",
       expiresIn: 3600, // 1 hour
       issuer: "my-collaborative-app",
     });
 
-    // TODO_11: Add UI for authentication
-    const userId = 'gencho';
-    // create a JWT token for the user
-    const token = await tokenManager.createToken(
-      // user id
-      userId,
-      // room id (multi-tenant)
-      "parking-org",
-      // document access patterns and permissions
-      [
-        // TODO_5: Give each user permissions to their state only.
-        // state: {
-            // userId: String,
-            // karma: Number,
-            // urgency: String,
-        // }
-        // allow the user to have full access to all documents
-        {
-          pattern: "system_state/*",
-          permissions: ["read", "comment"]
-        },
-        {
-          pattern: `user_data/${userId}/*`,
-          permissions: ["read", "write", "comment", "suggest", "admin"]
-        },
-      ],
-    );
-
+    
+    const username = ref('');
     // TODO_1: add passing the token again
     // TODO_2: make the port for WebSockets configurable
-    const provider = await Provider.create({
-      url: `ws://${window.location.hostname}:3000/?token=${token}`,
-      document: "main-cluster",
-    });
+    // const provider = await Provider.create({
+    //   url: `ws://${window.location.hostname}:3000/?token=${token}`,
+    //   document: "main-cluster",
+    // });
 
-    await provider.synced;
-
-    // TODO_3: See if we can build a similar component with a form
-    // for the reservation system and add it here.
-    // const type = provider.doc.getXmlFragment("prosemirror");
-
-    // const editor = document.createElement("div");
-    // editor.setAttribute("id", "editor");
-    // const editorContainer = document.createElement("div");
-    // editorContainer.insertBefore(editor, null);
-    // document.body.insertBefore(editorContainer, null);
-    // const { doc, mapping } = initProseMirrorDoc(type, schema);
-
-    // Also, see if we should *actually* create a component.
-
-    const user_data = provider.doc.getMap(`user_data/${userId}`);
-    user_data.set('karma', 42);
-    user_data.set('urgency', 'medium');
-    provider.on("update", (state) => {
-      console.log("Connection state:", state.type);
-    });
-
-    const message = ref('Please choose your urgency:');
-    const karma = ref(user_data.get('karma'))
-    // TODO_4: add constants for high/mid/low urgency
-    const urgency = ref(user_data.get('urgency'));
-
-    const system_state = provider.doc.getMap('system_state');
-    const simulation_running = ref(system_state.get('simulation_running'));
-    provider.doc.on('update', (update, origin) => {
-      console.log('Document updated');
-      // TODO_6: There should be a finer-grained way to update the state.
-      simulation_running.value = system_state.get('simulation_running');
-    });
+    // await provider.synced;
 
     createApp({
       setup() {
-        // urgency_val should be one of: 'low', 'medium', 'high'
-        function set_urgency(urgency_val) {
-          if (simulation_running.value) return;
-
-          urgency.value = urgency_val;
-          user_data.set('urgency', urgency_val);
-        }
-        function reserve() {
-          // TODO_5: check if the value is synced from the server
-          // simulation_running.value = true;
+        function connect() {
+          // TODO: There must be a more civilized way to redirect the page.
+          console.log('Connecting with username: ', username.value);
+          window.location = `${window.location}user-panel.html?userId=${username.value}`
         }
         return {
-          message,
-          karma,
-          urgency,
-          simulation_running,
-          set_urgency,
-          reserve
+          username,
+          connect
         }
       }
     }).mount('#app')
@@ -133,31 +65,11 @@
     <h1>Parking reservation system, v. 0.0.1</h1>
     <hr/>
     <div id="app">
-      <div id="karma-view" class="form-section">
-        You currently have <b>{{ karma }}</b> parking points.
+      <div class="form-section" id="user-login">
+        <span class="form-label">Please enter your username:</span>
+        <input id="username" v-model="username"/>
+        <button @click="connect">Connect</button>
       </div>
-
-      <div class="form-section" v-if="!simulation_running">
-        <span class="form-label">{{ message }}</span>
-        <span>
-          <button @click="set_urgency('low')">&#x1F69C; Low</button>
-        </span>
-        <span>
-          <button @click="set_urgency('medium')">&#x1F697; Medium</button>
-        </span>
-        <span>
-          <button @click="set_urgency('high')">&#x1F695; High</button>
-        </span>
-      </div>
-
-      <div id="urgency-view" class="form-section" v-if="!simulation_running">
-        <span class="form-label">Current urgency: <b>{{ urgency }}</b></span>
-        <button @click="reserve">Reserve!</button>
-      </div>
-      <div class="form-section" style="border-color: lightcoral;" v-else>
-        Simulation running, please wait...
-      </div>
-
     </div>
     <div
       id="devtools"
