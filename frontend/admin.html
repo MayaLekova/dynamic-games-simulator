@@ -57,14 +57,18 @@
     // Transform the map {userId: {...}} to an iterable and view it
     // in a table, as in https://vuejs.org/tutorial/#step-7
     // Maybe we should add a list of known users and read them one by one.
-    const userId = 'gencho';
-    const gencho_data = provider.doc.getMap(`user_data/${userId}`);
-    console.log(gencho_data);
-    const all_users = ref([{
-      id: userId,
-      karma: gencho_data.get('karma'),
-      urgency: gencho_data.get('urgency')
-    }]);
+    const user_ids = ['gencho', 'pancho'];
+    let all_users_data = [];
+    for (const user_id of user_ids) {
+      const user_data = provider.doc.getMap(`user_data/${user_id}`);
+      console.log(user_data);
+      all_users_data.push({
+        id: user_id,
+        karma: user_data.get('karma'),
+        urgency: user_data.get('urgency')
+      })
+    }
+    const all_users = ref(all_users_data);
 
     const message = ref('Simulation: ');
 
@@ -78,11 +82,18 @@
       console.log(origin);
       // TODO_6: There should be a finer-grained way to update the state.
       // TODO_11: Update gencho_data and similar.
-      all_users.value = [{
-        id: userId,
-        karma: gencho_data.get('karma'),
-        urgency: gencho_data.get('urgency')
-      }];
+
+      all_users_data = [];
+      for (const user_id of user_ids) {
+        const user_data = provider.doc.getMap(`user_data/${user_id}`);
+        all_users_data.push({
+          id: user_id,
+          karma: user_data.get('karma'),
+          urgency: user_data.get('urgency')
+        })
+      }
+
+      all_users.value = all_users_data;
     });
 
     createApp({

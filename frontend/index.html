@@ -24,16 +24,28 @@
       issuer: "my-collaborative-app",
     });
 
-    
+    const token = await tokenManager.createToken(
+      // user id
+      '',
+      // room id (multi-tenant)
+      "parking-org",
+      // document access patterns and permissions
+      [{
+          pattern: "system_state/*",
+          permissions: ["read", "comment"]
+        },
+      ],
+    );
+
     const username = ref('');
     // TODO_1: add passing the token again
     // TODO_2: make the port for WebSockets configurable
-    // const provider = await Provider.create({
-    //   url: `ws://${window.location.hostname}:3000/?token=${token}`,
-    //   document: "main-cluster",
-    // });
+    const provider = await Provider.create({
+      url: `ws://${window.location.hostname}:3000/?token=${token}`,
+      document: "main-cluster",
+    });
 
-    // await provider.synced;
+    await provider.synced;
 
     createApp({
       setup() {
