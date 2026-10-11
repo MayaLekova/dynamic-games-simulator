@@ -15,6 +15,8 @@
     import { createTokenManager } from "https://esm.sh/teleportal@0.0.4/token";
     import { createApp, ref } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
 
+    import * as allocation from './allocation.js';
+
     // just for illustration, we create the token on the client
     // in production, you would generate the token on the server and send it to the client
     const tokenManager = createTokenManager({
@@ -58,7 +60,12 @@
     // in a table, as in https://vuejs.org/tutorial/#step-7
     // Maybe we should add a list of known users and read them one by one.
     const user_ids = ['gencho', 'pancho'];
+    const robo_users = 100;
+    for (let id = 0; id < robo_users; ++id) {
+      user_ids.push('user_' + id.toString());
+    }
     let all_users_data = [];
+    let karma_distribution_data = [];
     for (const user_id of user_ids) {
       const user_data = provider.doc.getMap(`user_data/${user_id}`);
       console.log(user_data);
@@ -67,8 +74,14 @@
         karma: user_data.get('karma'),
         urgency: user_data.get('urgency')
       })
+
+      // Add the current user to the histogram
+      const karma = user_data.get('karma');
+      let num_users = karma_distribution_data[karma] || 0;
+      karma_distribution_data[karma] = num_users + 1;
     }
     const all_users = ref(all_users_data);
+    const karma_distribution = ref(karma_distribution_data);
 
     const message = ref('Simulation: ');
 
@@ -83,17 +96,27 @@
       // TODO_6: There should be a finer-grained way to update the state.
       // TODO_11: Update gencho_data and similar.
 
+      // an array of all users, represented by an object with shape:
+      // { id: String, karma: Number, urgency: Number }
       all_users_data = [];
+      // a histrogram counting the number of users with a given karma value
+      karma_distribution_data = [];
       for (const user_id of user_ids) {
         const user_data = provider.doc.getMap(`user_data/${user_id}`);
         all_users_data.push({
           id: user_id,
           karma: user_data.get('karma'),
-          urgency: user_data.get('urgency')
-        })
+          urgency: user_data.get('urgency') || 'medium'
+        });
+
+        // Add the current user to the histogram
+        const karma = user_data.get('karma');
+        let num_users = karma_distribution_data[karma] || 0;
+        karma_distribution_data[karma] = num_users + 1;
       }
 
       all_users.value = all_users_data;
+      karma_distribution.value = karma_distribution_data;
     });
 
     createApp({
@@ -101,15 +124,27 @@
         function start_simulation() {
           simulation_running.value = true;
           system_state.set('simulation_running', true);
+
+          // TODO_12: call allocate for 7 subzones
+
+          let alloc_spaces = allocation.allocate(0, [10, 5, 10, 5, 2, 2, 2, 5, 10, 5]);
+          console.log(alloc_spaces);
+          console.log('high: ', alloc_spaces.high);
+          console.log('medium: ', alloc_spaces.medium);
+          console.log('low: ', alloc_spaces.low);
+          console.log('remaining: ', alloc_spaces.remaining);
         }
         // TODO_3: If we want to be fancy, we could add a "pause"
         function stop_simulation() {
           simulation_running.value = false;
           system_state.set('simulation_running', false);
+
+          // TODO_13: update UI with the distribution
         }
         return {
           message,
           all_users,
+          karma_distribution,
           simulation_running,
           start_simulation,
           stop_simulation
@@ -140,6 +175,16 @@
         </span>
         <span>
           <button @click="stop_simulation">&#x25A0; Stop</button>
+        </span>
+      </div>
+
+      <div id="spaces-allocation">
+        
+      </div>
+
+      <div id="karma-distribution">
+        <span v-for="(num_users, karma) in karma_distribution">
+          K[{{ karma }}] -> {{num_users || 0}} ;
         </span>
       </div>
 
