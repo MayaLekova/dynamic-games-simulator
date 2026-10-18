@@ -16,7 +16,7 @@ const Priority = {
 
 // Sample number of spaces for each subzone
 // total: 56
-let spaces_per_subzone = [5, 3, 7, 25, 4, 2, 10];
+let spaces_per_subzone = [5, 3, 7, 65, 4, 2, 10];
 // At each re-distribution it's possible that the surplus
 // karma is not divisible by the number of users; thus we
 // give the opportunity to accumulate the extra karma
@@ -35,7 +35,7 @@ function test_allocate() {
     { high: 3, medium: 2, low: 0, remaining: 0 },
     { high: 3, medium: 0, low: 0, remaining: 0 },
     { high: 3, medium: 4, low: 0, remaining: 0 },
-    { high: 3, medium: 4, low: 3, remaining: 15},   // space for everyone + extra
+    { high: 3, medium: 4, low: 3, remaining: 55},   // space for everyone + extra
     { high: 3, medium: 1, low: 0, remaining: 0 },
     { high: 2, medium: 0, low: 0, remaining: 0 },
     { high: 3, medium: 4, low: 3, remaining: 0 },   // space for everyone
@@ -64,8 +64,8 @@ function test_allocate() {
 // runs a large number of iterations (e.g. >1000)
 // with 25 users, random distribution of bids
 // and update their karma points respectively
-function stress_25(subzone) {
-  let num_users = 25, iterations = 10;
+function stress_random(subzone, num_users_, iterations_, output_histogram) {
+  let num_users = num_users_ || 25, iterations = iterations_ || 10;
   let bids = [], karma = [],
     bid_values = [0, Priority.low, Priority.medium, Priority.high];
 
@@ -82,7 +82,12 @@ function stress_25(subzone) {
     // generate a sample
     for (let user = 0; user < num_users; ++user) {
       let bid = bid_values[Math.floor(Math.random() * 4) % 4];
-      bids.push(bid);
+      // disallow negative karma values
+      if (karma[user] >= bid) {
+        bids.push(bid);
+      } else {
+        bids.push(0);
+      }
     }
 
     debug_log('bids: ', bids);
@@ -113,6 +118,14 @@ function stress_25(subzone) {
     // TODO: add redistribution with various variants
     // (redistribution functions)
     debug_log('iteration ', i, '; karma: ', karma);
+
+    if (output_histogram) {
+      const output_at_iter = [10, 100, 1000];
+      if (output_at_iter.indexOf(i+1) < 0) continue;
+
+      console.log(i+1);
+      console.log(karma);
+    }
   }
 
   let sum = 0;
@@ -158,7 +171,6 @@ function allocate(subzone, bids) {
   let updates = [];
   for (let id = 0; id < bids.length; ++id) updates.push(0);
 
-  // TODO: add personal adjustment (assignment) of the allocated spaces
   // Allocate spaces to high-priority bidders as much as possible.
   alloc_high = Math.min(num_high, num_spaces);
   if (alloc_high > 0) {
@@ -251,7 +263,7 @@ function shuffle(array) {
 }
 
 function debug_log(...args) {
-  console.log(args);
+  // console.log(...args);
 }
 
-export { Priority, allocate, test_allocate, stress_25 };
+export { Priority, allocate, test_allocate, stress_random };

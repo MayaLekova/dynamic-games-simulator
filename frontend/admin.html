@@ -154,9 +154,14 @@
         function test() {
           console.log('----------- Testing -----------');
           allocation.test_allocate();
-          console.log('----------- <END> -----------');
-          console.log('stress test for zone 6 [10 spaces for 25 users]:');
-          let karma_points = allocation.stress_25(6);
+          console.log('----------- <END> -----------\n');
+          console.log('stress test for zone 6 [65 spaces for 100 users]:');
+          let karma_points = allocation.stress_random(
+            6,    // subzone
+            100,  // users
+            1000, // iterations
+            true  // output histogram
+          );
           console.log(karma_points);
         }
         return {
