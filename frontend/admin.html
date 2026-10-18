@@ -127,7 +127,17 @@
 
           // TODO_12: call allocate for 7 subzones
 
-          let alloc_spaces = allocation.allocate(0, [10, 5, 10, 5, 2, 2, 2, 5, 10, 5]);
+          /* const Priority = {
+            low: 2,
+            medium: 5,
+            high: 10
+          };
+          */
+          // contains 3 high's, 4 medium's, 3 low's
+          let sample_bids = [10, 5, 10, 5, 2, 2, 2, 5, 10, 5];
+
+          // allocate(subzone index, [... users' bids])
+          let alloc_spaces = allocation.allocate(0, sample_bids);
           console.log(alloc_spaces);
           console.log('high: ', alloc_spaces.high);
           console.log('medium: ', alloc_spaces.medium);
@@ -141,13 +151,22 @@
 
           // TODO_13: update UI with the distribution
         }
+        function test() {
+          console.log('----------- Testing -----------');
+          allocation.test_allocate();
+          console.log('----------- <END> -----------');
+          console.log('stress test for zone 6 [10 spaces for 25 users]:');
+          let karma_points = allocation.stress_25(6);
+          console.log(karma_points);
+        }
         return {
           message,
           all_users,
           karma_distribution,
           simulation_running,
           start_simulation,
-          stop_simulation
+          stop_simulation,
+          test
         }
       }
     }).mount('#app')
@@ -175,6 +194,9 @@
         </span>
         <span>
           <button @click="stop_simulation">&#x25A0; Stop</button>
+        </span>
+        <span>
+          <button @click="test">&#x26D7; Test</button>
         </span>
       </div>
 
